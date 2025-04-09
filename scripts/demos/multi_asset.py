@@ -111,14 +111,17 @@ class MultiObjectSceneCfg(InteractiveSceneCfg):
                 sim_utils.ConeCfg(
                     radius=0.3,
                     height=0.6,
+                    #collision_props=sim_utils.CollisionPropertiesCfg(),
                     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0), metallic=0.2),
                 ),
                 sim_utils.CuboidCfg(
                     size=(0.3, 0.3, 0.3),
+                    #collision_props=sim_utils.CollisionPropertiesCfg(),
                     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0), metallic=0.2),
                 ),
                 sim_utils.SphereCfg(
                     radius=0.3,
+                    #collision_props=sim_utils.CollisionPropertiesCfg(),
                     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.0, 1.0), metallic=0.2),
                 ),
             ],

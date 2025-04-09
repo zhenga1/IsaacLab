@@ -21,14 +21,9 @@ if TYPE_CHECKING:
         IdealPDActuatorCfg,
         ImplicitActuatorCfg,
         RemotizedPDActuatorCfg,
+        IdentifiedActuatorCfg
     )
-
-
-"""
-Implicit Actuator Models.
-"""
-
-
+    
 class ImplicitActuator(ActuatorBase):
     """Implicit actuator model that is handled by the simulation.
 
@@ -232,6 +227,34 @@ class DCMotor(IdealPDActuator):
         # clip the torques based on the motor limits
         return torch.clip(effort, min=min_effort, max=max_effort)
 
+"""
+Implicit Actuator Models.
+"""
+
+class IdentifiedActuator(DCMotor):
+    cfg: IdentifiedActuatorCfg
+
+    def __init__(self, cfg: IdentifiedActuatorCfg, *args, **kwargs):
+        super().__init__(cfg, *args, **kwargs)
+        self.friction_static = self._parse_joint_parameter(self.cfg.friction_static, 0.)
+        self.activation_vel = self._parse_joint_parameter(self.cfg.activation_vel, torch.inf)
+        self.friction_dynamic = self._parse_joint_parameter(self.cfg.friction_dynamic, 0.)
+
+    def compute(
+            self, control_action: ArticulationActions, joint_pos: torch.Tensor, joint_vel: torch.Tensor
+    ) -> ArticulationActions:
+        # call the base method
+        control_action = super().compute(control_action, joint_pos, joint_vel)
+
+        # apply friction model on the torque
+        control_action.joint_efforts = control_action.joint_efforts - (self.friction_static * torch.tanh(
+            joint_vel / self.activation_vel) + self.friction_dynamic * joint_vel)
+
+        self.applied_effort = control_action.joint_efforts
+        control_action.joint_positions = None
+        control_action.joint_velocities = None
+
+        return control_action
 
 class DelayedPDActuator(IdealPDActuator):
     """Ideal PD actuator with delayed command application.

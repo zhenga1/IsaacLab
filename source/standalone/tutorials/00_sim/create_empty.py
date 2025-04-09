@@ -26,7 +26,6 @@ AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
 # launch omniverse app
-# AppLauncher is the simulation app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
@@ -40,15 +39,11 @@ def main():
 
     # Initialize the simulation context
     sim_cfg = SimulationCfg(dt=0.01)
-    # create instance of the Simulation context
     sim = SimulationContext(sim_cfg)
     # Set main camera
-    # First parameter ([2.5, 2.5, 2.5]) - Camera position. 
-    # Second parameter ([0.0, 0.0, 0.0]) - Camera target. (where the camera is pointed)
-    # So the camera is away from the origin, pointing at the origin. 
     sim.set_camera_view([2.5, 2.5, 2.5], [0.0, 0.0, 0.0])
 
-    # Play the simulator, initialize the physics handles. 
+    # Play the simulator
     sim.reset()
     # Now we are ready!
     print("[INFO]: Setup complete...")
@@ -56,7 +51,7 @@ def main():
     # Simulate physics
     while simulation_app.is_running():
         # perform step
-        sim.step() 
+        sim.step()
 
 
 if __name__ == "__main__":

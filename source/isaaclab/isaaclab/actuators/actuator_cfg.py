@@ -13,6 +13,9 @@ from . import actuator_net, actuator_pd
 from .actuator_base import ActuatorBase
 
 
+from .actuator_pd import IdentifiedActuator
+
+
 @configclass
 class ActuatorBaseCfg:
     """Configuration for default actuators in an articulation."""
@@ -105,6 +108,20 @@ class DCMotorCfg(IdealPDActuatorCfg):
     """Peak motor force/torque of the electric DC motor (in N-m)."""
 
 
+@configclass
+class IdentifiedActuatorCfg(DCMotorCfg):
+    """Configuration for direct control (DC) motor actuator model."""
+
+    class_type: type = IdentifiedActuator
+
+    friction_static: float = MISSING
+    """ (in N-m)."""
+    activation_vel: float = MISSING
+    """ (in Rad/s)."""
+    friction_dynamic: float = MISSING
+    """ (in N-m-s/Rad)."""
+    
+    
 @configclass
 class ActuatorNetLSTMCfg(DCMotorCfg):
     """Configuration for LSTM-based actuator model."""

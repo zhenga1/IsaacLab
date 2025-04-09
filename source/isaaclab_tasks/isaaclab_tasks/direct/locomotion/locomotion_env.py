@@ -41,7 +41,7 @@ class LocomotionEnv(DirectRLEnv):
         self.heading_vec = torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1)
         )
-        self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1))
+        self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1)) # inverse of the starting quaternion rotation
         self.basis_vec0 = self.heading_vec.clone()
         self.basis_vec1 = self.up_vec.clone()
 

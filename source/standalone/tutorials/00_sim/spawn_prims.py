@@ -40,12 +40,10 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 def design_scene():
     """Designs the scene by spawning ground plane, light, objects and meshes from usd files."""
     # Ground-plane
-    # I.e. the thing that all the objects are layed out on
     cfg_ground = sim_utils.GroundPlaneCfg()
     cfg_ground.func("/World/defaultGroundPlane", cfg_ground)
 
     # spawn distant light
-
     cfg_light_distant = sim_utils.DistantLightCfg(
         intensity=3000.0,
         color=(0.75, 0.75, 0.75),
@@ -53,7 +51,6 @@ def design_scene():
     cfg_light_distant.func("/World/lightDistant", cfg_light_distant, translation=(1, 0, 10))
 
     # create a new xform prim for all objects to be spawned under
-    # parent directory, since it is /World/Objects
     prim_utils.create_prim("/World/Objects", "Xform")
     # spawn a red cone
     cfg_cone = sim_utils.ConeCfg(
@@ -68,13 +65,9 @@ def design_scene():
     cfg_cone_rigid = sim_utils.ConeCfg(
         radius=0.15,
         height=0.5,
-        # making the cone a rigid body
         rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-        # mass is 1kg
         mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
-        # Collision enabled?
         collision_props=sim_utils.CollisionPropertiesCfg(),
-        # Green color
         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
     )
     cfg_cone_rigid.func(

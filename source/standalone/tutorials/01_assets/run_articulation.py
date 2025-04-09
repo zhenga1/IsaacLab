@@ -57,6 +57,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
 
     # Create separate groups called "Origin1", "Origin2"
     # Each group will have a robot in it
+    # Specifies the (DISTANCE) between the two robots.
     origins = [[0.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]
     # Origin 1
     prim_utils.create_prim("/World/Origin1", "Xform", translation=origins[0])
@@ -96,7 +97,7 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
             root_state[:, :3] += origins
             robot.write_root_pose_to_sim(root_state[:, :7])
             robot.write_root_velocity_to_sim(root_state[:, 7:])
-            # set joint positions with some noise added to (the positions)
+            # set joint positions with some noise
             joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
             joint_pos += torch.rand_like(joint_pos) * 0.1
             robot.write_joint_state_to_sim(joint_pos, joint_vel)
