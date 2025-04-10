@@ -11,6 +11,7 @@ from isaaclab_assets import H1_CFG
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
 from isaaclab.envs import DirectRLEnvCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
@@ -18,7 +19,6 @@ from isaaclab.utils import configclass
 
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 from isaaclab_tasks.direct.locomotion.somersault_env import SomersaultEnv
-
 
 @configclass
 class H1EnvCfg(DirectRLEnvCfg):
@@ -45,12 +45,31 @@ class H1EnvCfg(DirectRLEnvCfg):
         ),
         debug_vis=False,
     )
+    
+    scene: InteractiveSceneCfg = InteractiveSceneCfg()
+    
+    from isaaclab.sensors import ContactSensorCfg, SensorBaseCfg
 
-    # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
+    # Contact sensor for left foot
+    contact_sensor_cfg_left: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/LF_FOOT",       # Relative path within the foot link
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
+    )
 
-    # robot
-    robot: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    # Contact sensor for right foot
+    contact_sensor_cfg_right : ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/RF_FOOT",  # Relative path within the foot link
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
+    )
+    # Final robot config with both sensors
+    robot: ArticulationCfg = H1_CFG.replace(
+        prim_path="/World/envs/env_.*/Robot",
+    )
+
     joint_gears: list = [
         50.0,  # left_hip_yaw
         50.0,  # right_hip_yaw
