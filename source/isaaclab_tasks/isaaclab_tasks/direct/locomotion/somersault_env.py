@@ -137,7 +137,7 @@ class SomersaultEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        pitch_velocity = self.angvel_loc[:,0]
+        pitch_velocity = self.angvel_loc[:,1]
         # contact_forces_sum = (
         #     self.scene["contact_forces_LF"].data.contact_forces +
         #     self.robot.sensors["contact_forces_RF"].data.contact_forces
@@ -223,28 +223,33 @@ def compute_rewards(
     Computes the reward for the somersault task. 
     """
 
-    heading_weight_tensor = torch.ones_like(heading_proj) * heading_weight
-    heading_reward = torch.where(heading_proj > 0.8, heading_weight_tensor, heading_weight * heading_proj / 0.8)
+    flip_angle_threshold = torch.pi * 0.9  # nearly upside down
+    flip_reward_scale = 2.0
+    orientation_reward_scale = 0.5
+    shaping_scale = 0.05
+    action_penalty_scale = 0.001
 
-    # aligning up axis of robot and environment
-    up_reward = torch.zeros_like(heading_reward)
-    up_reward = torch.where(up_proj > 0.93, up_reward + up_weight, up_reward)
 
-    flipped_now = torch.abs(pitch) >= flip_angle_threshold # Check if torso is flopped 
-    update_has_flipped = flipped_now | flipped_success # Update the flipped success status
-    flip_reward = flip_reward_scale * flipped_now.float() * (~flipped_success).float() # reward for flipping (first time)
+    # Check if robot is flipped (nearly upside down)
+    flipped_now = torch.abs(pitch) >= flip_angle_threshold
+    update_has_flipped = flipped_now | flipped_success  # flipped_success is running state
 
-    is_upright = torch.abs(normalize_angle(pitch)) < upright_angle_threshold # pass into normalize angle to ensure the angle is not out of bounds
-    #is_in_contact = contact_forces_sum > contact_force_threshold 
-    landed_successfully = update_has_flipped & is_upright  # Check if the agent has landed successfully
+    # Reward for flipping the first time
+    flip_reward = flip_reward_scale * flipped_now.float() * (~flipped_success).float()
 
-    landing_reward = landing_reward_scale * landed_successfully.float() # reward for landing successfully
-    action_penalty = action_penalty_scale * torch.sum(actions ** 2, dim = -1) # L2 action penalty for the actions taken by agent (magnitude)
+    # Encourage high pitch angular velocity before flip
+    shaping_reward = shaping_scale * pitch_velocity * (~update_has_flipped).float()
 
-    shaping_reward = 0.02 * pitch_velocity * (~update_has_flipped).float() # reward for pitch velocity when not flipped
+    # Encourage full pitch angle even if not flipped yet
+    orientation_reward = orientation_reward_scale * torch.abs(pitch) / torch.pi
 
-    total_reward = heading_reward + up_reward + flip_reward + landing_reward - action_penalty + shaping_reward # the total reward
+    # L2 action penalty
+    action_penalty = action_penalty_scale * torch.sum(actions ** 2, dim=-1)
+
+    # Total reward
+    total_reward = flip_reward + shaping_reward + orientation_reward - action_penalty
     return total_reward, update_has_flipped
+
 
 
 @torch.jit.script
