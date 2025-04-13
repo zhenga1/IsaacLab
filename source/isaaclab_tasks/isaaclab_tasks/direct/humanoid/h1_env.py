@@ -20,6 +20,49 @@ from isaaclab.utils import configclass
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 from isaaclab_tasks.direct.locomotion.somersault_env import SomersaultEnv
 
+from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
+from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
+from isaaclab.utils import configclass
+
+##
+# Pre-defined configs
+##
+from isaaclab_assets.robots.anymal import ANYMAL_C_CFG  # isort: skip
+
+
+@configclass
+class ContactSensorSceneCfg(InteractiveSceneCfg):
+    """Design the scene with sensors on the robot."""
+
+    # ground plane
+    ground = AssetBaseCfg(prim_path="/World/defaultGroundPlane", spawn=sim_utils.GroundPlaneCfg())
+
+    # lights
+    dome_light = AssetBaseCfg(
+        prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
+    )
+
+    # robot
+    robot = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    
+    # Contact sensor for left foot
+    contact_forces_LF: ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/LF_FOOT",       # Relative path within the foot link
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
+    )
+
+    # Contact sensor for right foot
+    contact_forces_RF : ContactSensorCfg = ContactSensorCfg(
+        prim_path="/World/envs/env_.*/Robot/RF_FOOT",  # Relative path within the foot link
+        update_period=0.0,
+        history_length=6,
+        debug_vis=True
+    )
+
+
 @configclass
 class H1EnvCfg(DirectRLEnvCfg):
     # env
@@ -45,26 +88,8 @@ class H1EnvCfg(DirectRLEnvCfg):
         ),
         debug_vis=False,
     )
-    
-    scene: InteractiveSceneCfg = InteractiveSceneCfg()
-    
-    from isaaclab.sensors import ContactSensorCfg, SensorBaseCfg
-
-    # Contact sensor for left foot
-    contact_sensor_cfg_left: ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot/LF_FOOT",       # Relative path within the foot link
-        update_period=0.0,
-        history_length=6,
-        debug_vis=True
-    )
-
-    # Contact sensor for right foot
-    contact_sensor_cfg_right : ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot/RF_FOOT",  # Relative path within the foot link
-        update_period=0.0,
-        history_length=6,
-        debug_vis=True
-    )
+    #scene = ContactSensorSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
+    scene : InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
     # Final robot config with both sensors
     robot: ArticulationCfg = H1_CFG.replace(
         prim_path="/World/envs/env_.*/Robot",

@@ -137,7 +137,7 @@ class SomersaultEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        pitch_velocity = self.angvel_loc[:,1]
+        pitch_velocity = self.angvel_loc[:,0]
         # contact_forces_sum = (
         #     self.scene["contact_forces_LF"].data.contact_forces +
         #     self.robot.sensors["contact_forces_RF"].data.contact_forces
@@ -151,6 +151,10 @@ class SomersaultEnv(DirectRLEnv):
             self.extras["has_flipped"] = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
         reward, update_has_flipped = compute_rewards(
+            heading_proj=self.heading_proj,
+            up_proj=self.up_proj,
+            heading_weight=self.cfg.heading_weight,
+            up_weight=self.cfg.up_weight,
             pitch=self.pitch,
             pitch_velocity=pitch_velocity,
             #contact_forces_sum=contact_forces_sum,
@@ -199,6 +203,10 @@ class SomersaultEnv(DirectRLEnv):
 
 @torch.jit.script
 def compute_rewards(
+    heading_proj: torch.Tensor, # Heading projection of the torso
+    up_proj: torch.Tensor, # Up projection of the torso
+    heading_weight: float, # Weight for heading reward
+    up_weight: float, # Weight for up reward
     pitch: torch.Tensor, # Pitch of the torso
     pitch_velocity: torch.Tensor, # Pitch velocity of the torso
     #contact_forces_sum: torch.Tensor, # Contact forces on the feet
@@ -214,6 +222,14 @@ def compute_rewards(
     """
     Computes the reward for the somersault task. 
     """
+
+    heading_weight_tensor = torch.ones_like(heading_proj) * heading_weight
+    heading_reward = torch.where(heading_proj > 0.8, heading_weight_tensor, heading_weight * heading_proj / 0.8)
+
+    # aligning up axis of robot and environment
+    up_reward = torch.zeros_like(heading_reward)
+    up_reward = torch.where(up_proj > 0.93, up_reward + up_weight, up_reward)
+
     flipped_now = torch.abs(pitch) >= flip_angle_threshold # Check if torso is flopped 
     update_has_flipped = flipped_now | flipped_success # Update the flipped success status
     flip_reward = flip_reward_scale * flipped_now.float() * (~flipped_success).float() # reward for flipping (first time)
@@ -227,7 +243,7 @@ def compute_rewards(
 
     shaping_reward = 0.02 * pitch_velocity * (~update_has_flipped).float() # reward for pitch velocity when not flipped
 
-    total_reward = flip_reward + landing_reward - action_penalty + shaping_reward # the total reward
+    total_reward = heading_reward + up_reward + flip_reward + landing_reward - action_penalty + shaping_reward # the total reward
     return total_reward, update_has_flipped
 
 
