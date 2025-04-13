@@ -222,34 +222,14 @@ def compute_rewards(
     """
     Computes the reward for the somersault task. 
     """
+    #reward = torch.zeros(root_states.shape[0], device=root_states.device)
+   # Optional: Clamp to avoid extreme spin rewards
+    pitch_velocity_clipped = torch.clamp(pitch_velocity, -10.0, 10.0)
 
-    flip_angle_threshold = torch.pi * 0.9  # nearly upside down
-    flip_reward_scale = 2.0
-    orientation_reward_scale = 0.5
-    shaping_scale = 0.05
-    action_penalty_scale = 0.001
+    # Positive reward for somersaulting motion (regardless of direction)
+    reward = 0.5 * torch.abs(pitch_velocity_clipped)
 
-
-    # Check if robot is flipped (nearly upside down)
-    flipped_now = torch.abs(pitch) >= flip_angle_threshold
-    update_has_flipped = flipped_now | flipped_success  # flipped_success is running state
-
-    # Reward for flipping the first time
-    flip_reward = flip_reward_scale * flipped_now.float() * (~flipped_success).float()
-
-    # Encourage high pitch angular velocity before flip
-    shaping_reward = shaping_scale * pitch_velocity * (~update_has_flipped).float()
-
-    # Encourage full pitch angle even if not flipped yet
-    orientation_reward = orientation_reward_scale * torch.abs(pitch) / torch.pi
-
-    # L2 action penalty
-    action_penalty = action_penalty_scale * torch.sum(actions ** 2, dim=-1)
-
-    # Total reward
-    total_reward = flip_reward + shaping_reward + orientation_reward - action_penalty
-    return total_reward, update_has_flipped
-
+    return reward, (torch.abs(pitch) >= flip_angle_threshold) | flipped_success # Check if torso is flopped 
 
 
 @torch.jit.script
