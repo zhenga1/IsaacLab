@@ -224,10 +224,13 @@ def compute_rewards(
     """
     #reward = torch.zeros(root_states.shape[0], device=root_states.device)
    # Optional: Clamp to avoid extreme spin rewards
-    pitch_velocity_clipped = torch.clamp(pitch_velocity, 0, 10.0)
+        # Reward positive pitch velocity (forward flip)
+    pos_reward = torch.clamp(pitch_velocity, min=0.0, max=10.0)
 
-    # Positive reward for somersaulting motion (regardless of direction)
-    reward = 0.5 * pitch_velocity_clipped
+    # Penalize negative or zero pitch velocity to break symmetry
+    neg_penalty = (pitch_velocity <= 0).float() * 0.3  # tweak 0.3 as needed
+
+    reward = 0.5 * pos_reward - neg_penalty
 
     return reward, (torch.abs(pitch) >= flip_angle_threshold) | flipped_success # Check if torso is flopped 
 
