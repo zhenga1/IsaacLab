@@ -49,8 +49,8 @@ class SomersaultEnv(DirectRLEnv):
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot)
-        self.contact_sensor_left = ContactSensor(cfg=self.cfg.contact_sensor_cfg_left)
-        self.contact_sensor_right = ContactSensor(cfg=self.cfg.contact_sensor_cfg_right)
+        #self.contact_sensor_left = ContactSensor(cfg=self.cfg.contact_sensor_cfg_left)
+        #self.contact_sensor_right = ContactSensor(cfg=self.cfg.contact_sensor_cfg_right)
         #self.contact_sensor_left.initialize()
         #self.contact_sensor_right.initialize()
         # add ground plane
@@ -66,11 +66,11 @@ class SomersaultEnv(DirectRLEnv):
         # add articulation to scene
         self.scene.articulations["robot"] = self.robot
 
-        self.scene.sensors["contact_forces_LF"] = self.contact_sensor_left
-        self.scene.sensors["contact_forces_RF"] = self.contact_sensor_right
+        #self.scene.sensors["contact_forces_LF"] = self.contact_sensor_left
+        #self.scene.sensors["contact_forces_RF"] = self.contact_sensor_right
         # add lights
-        light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
-        light_cfg.func("/World/Light", light_cfg)
+        # light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
+        # light_cfg.func("/World/Light", light_cfg)
         
 
     def _pre_physics_step(self, actions: torch.Tensor):
@@ -142,10 +142,10 @@ class SomersaultEnv(DirectRLEnv):
         #     self.scene["contact_forces_LF"].data.contact_forces +
         #     self.robot.sensors["contact_forces_RF"].data.contact_forces
         # )  
-        contact_forces_left = torch.linalg.norm(self.scene["contact_forces_LF"].data.net_forces_w, dim=-1)
-        contact_forces_right = torch.linalg.norm(self.scene["contact_forces_RF"].data.net_forces_w, dim=-1)
+        #contact_forces_left = torch.linalg.norm(self.scene["contact_forces_LF"].data.net_forces_w, dim=-1)
+        #contact_forces_right = torch.linalg.norm(self.scene["contact_forces_RF"].data.net_forces_w, dim=-1)
 
-        contact_forces_sum = contact_forces_left + contact_forces_right
+        #contact_forces_sum = contact_forces_left + contact_forces_right
 
         if "has_flipped" not in self.extras:
             self.extras["has_flipped"] = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
@@ -153,7 +153,7 @@ class SomersaultEnv(DirectRLEnv):
         reward, update_has_flipped = compute_rewards(
             pitch=self.pitch,
             pitch_velocity=pitch_velocity,
-            contact_forces_sum=contact_forces_sum,
+            #contact_forces_sum=contact_forces_sum,
             actions=self.actions,
             flipped_success=self.extras["has_flipped"],
         )
@@ -201,7 +201,7 @@ class SomersaultEnv(DirectRLEnv):
 def compute_rewards(
     pitch: torch.Tensor, # Pitch of the torso
     pitch_velocity: torch.Tensor, # Pitch velocity of the torso
-    contact_forces_sum: torch.Tensor, # Contact forces on the feet
+    #contact_forces_sum: torch.Tensor, # Contact forces on the feet
     actions: torch.Tensor, # Actions taken by agent
     flipped_success: torch.Tensor, ## Has flipped or not?
     flip_angle_threshold: float = 6.0, # Threshold for flip angle (in radians, 6.0 rad implying almost a full flip)
@@ -219,8 +219,8 @@ def compute_rewards(
     flip_reward = flip_reward_scale * flipped_now.float() * (~flipped_success).float() # reward for flipping (first time)
 
     is_upright = torch.abs(normalize_angle(pitch)) < upright_angle_threshold # pass into normalize angle to ensure the angle is not out of bounds
-    is_in_contact = contact_forces_sum > contact_force_threshold 
-    landed_successfully = update_has_flipped & is_upright & is_in_contact # Check if the agent has landed successfully
+    #is_in_contact = contact_forces_sum > contact_force_threshold 
+    landed_successfully = update_has_flipped & is_upright  # Check if the agent has landed successfully
 
     landing_reward = landing_reward_scale * landed_successfully.float() # reward for landing successfully
     action_penalty = action_penalty_scale * torch.sum(actions ** 2, dim = -1) # L2 action penalty for the actions taken by agent (magnitude)
