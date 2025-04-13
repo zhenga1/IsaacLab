@@ -8,6 +8,7 @@ from __future__ import annotations
 import torch
 
 import isaacsim.core.utils.torch as torch_utils
+import math
 from isaaclab.sensors import ContactSensor
 from isaacsim.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate
 
@@ -151,7 +152,9 @@ class SomersaultEnv(DirectRLEnv):
             self.extras["has_flipped"] = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
         reward, update_has_flipped = compute_rewards(
+            torso_height=self.torso_position[:, 2],
             heading_proj=self.heading_proj,
+            angular_velocity=self.ang_velocity,
             up_proj=self.up_proj,
             heading_weight=self.cfg.heading_weight,
             up_weight=self.cfg.up_weight,
@@ -203,7 +206,9 @@ class SomersaultEnv(DirectRLEnv):
 
 @torch.jit.script
 def compute_rewards(
+    torso_height: torch.Tensor, # Height of the torso
     heading_proj: torch.Tensor, # Heading projection of the torso
+    angular_velocity: torch.Tensor, # Angular velocity of the torso
     up_proj: torch.Tensor, # Up projection of the torso
     heading_weight: float, # Weight for heading reward
     up_weight: float, # Weight for up reward
@@ -225,6 +230,8 @@ def compute_rewards(
     #reward = torch.zeros(root_states.shape[0], device=root_states.device)
    # Optional: Clamp to avoid extreme spin rewards
         # Reward positive pitch velocity (forward flip)
+
+    # 1. Pitch velocity reward
     pos_reward = torch.clamp(pitch_velocity, min=0.0, max=10.0)
 
     # Penalize negative or zero pitch velocity to break symmetry
@@ -232,7 +239,21 @@ def compute_rewards(
 
     reward = 0.5 * pos_reward - neg_penalty
 
-    return reward, (torch.abs(pitch) >= flip_angle_threshold) | flipped_success # Check if torso is flopped 
+    # 2. Flip completion bonus (when pitch exceeds pi and hasn’t already flipped)
+    flip_completed = (pitch > math.pi) & (~flipped_success)
+    reward += flip_completed.float() * 5.0
+    flipped_success = flipped_success | flip_completed
+
+    # 3. Post-flip viability bonus: upright + low angular velocity
+    upright = torso_height > 0.8
+    stable_spin = torch.norm(angular_velocity, dim=1) < 5.0
+    reward +=  (upright & stable_spin & flipped_success).float() * 1.0
+
+    # 4. Penalty for flopping (too low)
+    flop_penalty = (torso_height < 0.5).float() 
+    reward -= flop_penalty * 0.5
+    return reward, flipped_success
+
 
 
 @torch.jit.script
