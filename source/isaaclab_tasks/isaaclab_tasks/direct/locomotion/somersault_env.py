@@ -231,28 +231,44 @@ def compute_rewards(
    # Optional: Clamp to avoid extreme spin rewards
         # Reward positive pitch velocity (forward flip)
 
-    # 1. Pitch velocity reward
+    # # 1. Pitch velocity reward
+    # height_scale = torch.clamp((torso_height - 0.5) / 0.4, 0.0, 1.0)  # 0.5 → 0 reward, 0.9+ → full
+    # pos_pitch_vel = torch.clamp(pitch_velocity, min=0.0, max=10.0)
+    # reward = 0.5 * pos_pitch_vel * height_scale  # main shaping term
+
+    # # ------------------------------------------
+    # # 2. Flip completion bonus (once per episode)
+    # # ------------------------------------------
+    # flip_completed = (pitch > math.pi) & (~flipped_success)
+    # reward += flip_completed.float() * 5.0
+    # flipped_success = flipped_success | flip_completed  # update flag
+
+    # # ------------------------------------------
+    # # 3. Post-flip viability bonus (stable and upright)
+    # # ------------------------------------------
+    # upright = torso_height > 0.8
+    # low_spin = torch.norm(angular_velocity, dim=1) < 5.0
+    # reward += (upright & low_spin & flipped_success).float() * 1.0
+
+    # # ------------------------------------------
+    # # 4. Penalty: Flopping
+    # # ------------------------------------------
+    # flopped = torso_height < 0.5
+    # reward -= flopped.float() * 0.5
+    #reward = torch.zeros(root_states.shape[0], device=root_states.device)
+   # Optional: Clamp to avoid extreme spin rewards
+        # Reward positive pitch velocity (forward flip)
+    
     pos_reward = torch.clamp(pitch_velocity, min=0.0, max=10.0)
+    height_scale = torch.clamp((torso_height - 0.5) / 0.4, 0.0, 1.0)  # 0.5 → 0 reward, 0.9+ → full
+
 
     # Penalize negative or zero pitch velocity to break symmetry
     neg_penalty = (pitch_velocity <= 0).float() * 0.3  # tweak 0.3 as needed
 
-    reward = 0.5 * pos_reward - neg_penalty
+    reward = 0.5 * pos_reward * height_scale - neg_penalty
 
-    # 2. Flip completion bonus (when pitch exceeds pi and hasn’t already flipped)
-    flip_completed = (pitch > math.pi) & (~flipped_success)
-    reward += flip_completed.float() * 5.0
-    flipped_success = flipped_success | flip_completed
-
-    # 3. Post-flip viability bonus: upright + low angular velocity
-    upright = torso_height > 0.8
-    stable_spin = torch.norm(angular_velocity, dim=1) < 5.0
-    reward +=  (upright & stable_spin & flipped_success).float() * 1.0
-
-    # 4. Penalty for flopping (too low)
-    flop_penalty = (torso_height < 0.5).float() 
-    reward -= flop_penalty * 0.5
-    return reward, flipped_success
+    return reward, (torch.abs(pitch) >= flip_angle_threshold) | flipped_success # Check if torso is flopped 
 
 
 
