@@ -1,0 +1,56 @@
+params:
+  seed: 42
+
+  # environment wrapper clipping
+  env:
+    clip_actions: 1.0
+  
+  algo:
+    name: a2c_continuous
+
+  model:
+    name: continuous_a2c_logstd
+
+  network:
+    name: actor_critic
+    separate: False
+    space:
+      continuous:
+        mu_activation: None
+        sigma_activation: None
+
+        mu_init:
+          name: default
+        sigma_init:
+          name: const_initializer
+          val: 0
+        fixed_sigma: True
+    mlp:
+      units: [400, 200, 100]
+      activation: elu
+      d2rl: False
+
+      initializer:
+        name: default
+      regularizer:
+        name: None
+  
+  load_checkpoint: False  # flag which sets whether to load the checkpoint
+  load_path: ''  # path to the checkpoint to load
+
+  config:
+    name: robot_chasing_ball
+    env_name: Isaac-BallFollowing-v0
+    device: 'cuda:0'
+    device_name: 'cuda:0'
+    multi_gpu: False
+    ppo: True
+    mixed_precision: True
+    normalize_input: True
+    normalize_value: True
+    value_bootstrap: True
+    num_actors: -1  # configured from the script (based on num_envs)
+    reward_shaper:
+      scale_value: 0.01
+    normalize_advantage: True
+    gamma: 0.99

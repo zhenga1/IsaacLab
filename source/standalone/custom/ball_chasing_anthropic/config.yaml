@@ -1,0 +1,78 @@
+# Ball Following Environment Configuration
+
+# Environment settings
+env:
+  num_envs: 1024
+  episode_length_s: 20.0
+  decimation: 4
+  enable_cameras: false
+
+# Simulation settings
+sim:
+  dt: 0.00416666  # 1/240
+  render_interval: 4
+  physics_material:
+    static_friction: 1.0
+    dynamic_friction: 1.0
+    restitution: 0.0
+
+# Rewards configuration
+rewards:
+  track_ball:
+    weight: 1.0
+    func: reward_track_ball
+  forward_velocity:
+    weight: 0.5
+    func: reward_forward_velocity
+  energy_penalty:
+    weight: -0.01
+    func: reward_energy_penalty
+  action_smoothness:
+    weight: -0.01
+    func: reward_action_smoothness
+  close_to_ball:
+    weight: 2.0
+    func: reward_close_to_ball
+
+# Termination conditions
+terminations:
+  time_out: true
+  base_contact_threshold: 1.0
+  too_far_distance: 10.0
+
+# Training hyperparameters
+training:
+  algorithm: "PPO"
+  learning_rate: 3e-4
+  num_steps: 2048
+  batch_size: 64
+  num_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  entropy_coef: 0.0
+  value_coef: 0.5
+  max_grad_norm: 0.5
+
+# Agent network architecture
+agent:
+  actor_hidden_dims: [512, 256, 128]
+  critic_hidden_dims: [512, 256, 128]
+  activation: "elu"
+  init_noise_std: 1.0
+
+# Ball settings
+ball:
+  radius: 0.15
+  mass: 0.5
+  initial_height: 0.5
+  spawn_range:
+    x: [-2.0, 2.0]
+    y: [-2.0, 2.0]
+    z: [0.5, 0.5]
+
+# Robot settings  
+robot:
+  action_scale: 0.25
+  joint_damping: 0.5
+  initial_position_noise: 0.1

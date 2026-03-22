@@ -47,6 +47,7 @@ class SomersaultEnv(DirectRLEnv):
         self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1)) # inverse of the starting quaternion rotation
         self.basis_vec0 = self.heading_vec.clone()
         self.basis_vec1 = self.up_vec.clone()
+        self.last_pitch_vel = torch.Tensor([0.0]).to(self.device).repeat(self.num_envs).to(self.device)
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot)
@@ -160,10 +161,12 @@ class SomersaultEnv(DirectRLEnv):
             up_weight=self.cfg.up_weight,
             pitch=self.pitch,
             pitch_velocity=pitch_velocity,
+            last_pitch_velocity=self.last_pitch_vel,
             #contact_forces_sum=contact_forces_sum,
             actions=self.actions,
             flipped_success=self.extras["has_flipped"],
         )
+        self.last_pitch_vel = pitch_velocity.clone()
         self.extras["has_flipped"] = update_has_flipped
         return reward
 
@@ -213,7 +216,8 @@ def compute_rewards(
     heading_weight: float, # Weight for heading reward
     up_weight: float, # Weight for up reward
     pitch: torch.Tensor, # Pitch of the torso
-    pitch_velocity: torch.Tensor, # Pitch velocity of the torso
+    pitch_velocity: torch.Tensor, # Pitch velocity of the torso,
+    last_pitch_velocity:  torch.Tensor, # Last pitch velocity of the torso
     #contact_forces_sum: torch.Tensor, # Contact forces on the feet
     actions: torch.Tensor, # Actions taken by agent
     flipped_success: torch.Tensor, ## Has flipped or not?
@@ -259,14 +263,19 @@ def compute_rewards(
    # Optional: Clamp to avoid extreme spin rewards
         # Reward positive pitch velocity (forward flip)
     
+    pitch_accel = (pitch_velocity - last_pitch_velocity)  # last_pitch_velocity and dt should be passed in
+    #print("pitch_accel ", pitch_accel)
+    #print("pitch_velocity ", pitch_velocity)
+    accel_reward = torch.clamp(pitch_accel, min=0.0, max=20.0) * 0.4  # scale as needed
+    accel_reward = torch.where(pitch_velocity > 0,accel_reward, -accel_reward * 0.2)
     pos_reward = torch.clamp(pitch_velocity, min=0.0, max=10.0)
     height_scale = torch.clamp((torso_height - 0.5) / 0.4, 0.0, 1.0)  # 0.5 → 0 reward, 0.9+ → full
 
 
     # Penalize negative or zero pitch velocity to break symmetry
-    neg_penalty = (pitch_velocity <= 0).float() * 0.3  # tweak 0.3 as needed
+    neg_penalty = (pitch_velocity <= 0).float() * 0.2  # tweak 0.3 as needed
 
-    reward = 0.5 * pos_reward * height_scale - neg_penalty
+    reward = 0.5 * pos_reward * height_scale + accel_reward - neg_penalty
 
     return reward, (torch.abs(pitch) >= flip_angle_threshold) | flipped_success # Check if torso is flopped 
 

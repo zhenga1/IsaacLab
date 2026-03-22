@@ -5,9 +5,6 @@
 
 from __future__ import annotations
 
-from isaaclab_assets import HUMANOID_CFG
-from isaaclab_assets import H1_CFG
-
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
 from isaaclab.envs import DirectRLEnvCfg
@@ -28,7 +25,7 @@ from isaaclab.utils import configclass
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets.robots.anymal import ANYMAL_C_CFG  # isort: skip
+from isaaclab_assets.robots.unitree import H1_CFG  # isort: skip
 
 
 @configclass
